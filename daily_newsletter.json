@@ -1,0 +1,179 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        -96
+      ],
+      "id": "6397ac02-9633-492a-864d-0528b966d02a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://newsapi.org/v2/top-headlines?country=us&pageSize=5",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "c761ac922ba94dfe8a99176adc36e9cc"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        816,
+        -96
+      ],
+      "id": "6308c825-7a1e-4693-bc52-0ddcdbfbca50",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract the articles array\nconst articles = items[0].json.articles;\n\n// Handle empty response\nif (!articles || articles.length === 0) {\n  return [{ json: { headlines: \"No news articles found today.\", articles: [] } }];\n}\n\n// Format headlines for OpenAI\nconst headlines = articles.map((a, i) => `${i + 1}. ${a.title}`).join(\"\\n\");\n\n// Prepare data for HTML email (with clickable links)\nconst articleData = articles.map(a => ({\n  title: a.title,\n  url: a.url\n}));\n\nreturn [{ json: { headlines, articles: articleData } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        -96
+      ],
+      "id": "e81e2f4e-e35d-4f8c-8abe-b23707f0db4a",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Create a short, engaging newsletter summary based on the following news headlines:\n{{$json[\"headlines\"]}}\n\nRequirements:\n\nBegin with a warm greeting like “Good morning!” or “Hello there!”.\n\nWrite in a friendly, conversational tone that feels approachable.\n\nCraft a smooth narrative that ties the stories together instead of simply listing them.\n\nHighlight the main themes or takeaways from the news.\n\nKeep it concise (150–200 words).\n\nAvoid repeating the exact wording of the headlines; reframe them in fresh, natural language.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        1232,
+        -96
+      ],
+      "id": "619c1be8-de76-43f0-8b8e-35048574fe0d",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        112
+      ],
+      "id": "d0febed9-92fd-4eee-9f28-39d23929cebb",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "1eCv0xfLNACG55jL",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "kvr99692@gmail.com",
+        "toEmail": "kvr99692@gmail.com",
+        "subject": "NewsLetter",
+        "html": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1584,
+        -96
+      ],
+      "id": "528bcb73-57c2-4c37-9189-1c2a8fd150d8",
+      "name": "Send email",
+      "webhookId": "f128516e-97e8-4264-9d68-9ec96f86d093",
+      "credentials": {
+        "smtp": {
+          "id": "PIcZaXvT7P73G4WW",
+          "name": "SMTP account 2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ad349a963119d2e4a0937d40074f7dcdaa6769630a6383c3092902367c515cc9"
+  }
+}
